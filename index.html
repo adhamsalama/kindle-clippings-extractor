@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kindle Highlights Extractor</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 20px;
+    }
+
+    form {
+      margin-bottom: 20px;
+    }
+
+    textarea {
+      width: 100%;
+    }
+
+    button {
+      padding: 10px;
+      cursor: pointer;
+    }
+
+    #books {
+      margin-top: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th,
+    td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    .highlight-section {
+      margin-bottom: 20px;
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.css" />
+</head>
+
+<body>
+  <h1>Kindle Highlights Extractor</h1>
+  <form>
+    <textarea name="content" id="content" cols="30" rows="10"></textarea>
+    <button type="submit">Extract</button>
+  </form>
+  <table id="highlightsTable">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Page</th>
+        <th>Location</th>
+        <th>Date</th>
+        <th>Highlight</th>
+      </tr>
+    </thead>
+    <tbody id="booksBody"></tbody>
+  </table>
+  <script src="https://code.jquery.com/jquery-3.7.1.slim.min.js"
+    integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8=" crossorigin="anonymous"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.js"></script>
+  <script>
+    const form = document.querySelector("form");
+    form.onsubmit = function (e) {
+      e.preventDefault();
+      const content = document.getElementById("content");
+      const books = extract(content.value);
+      let highlightsTableHtml = "";
+      Object.keys(books).forEach(bookTitle => {
+        books[bookTitle].forEach(highlight => {
+          highlightsTableHtml += generateTableRow(bookTitle, highlight);
+        });
+      });
+      const booksBody = document.getElementById("booksBody");
+      booksBody.innerHTML = highlightsTableHtml;
+      const table = new DataTable('#highlightsTable', {
+        "columnDefs": [
+          { "type": "num", "targets": 1 },
+          { "type": "num", "targets": 2 }
+        ]
+      });
+      content.value = "";
+    }
+
+    function generateTableRow(title, highlight) {
+      return `<tr class="highlight-section">
+        <td>${title}</td>
+        <td data-order="${highlight.page == "Unknown" ? 0 : highlight.page}">${highlight.page}</td>
+        <td data-order="${highlight.location.split("-")[0]}">${highlight.location}</td>
+        <td data-order="${highlight.date.getTime()}">${highlight.date.toDateString()}</td>
+        <td>${highlight.highlight}</td>
+      </tr>`;
+    }
+
+    function extract(fileContent) {
+      const extractedHighlights = [];
+      const books = {};
+
+      const highlights = fileContent.split("==========");
+      for (const highlight of highlights) {
+        const splittedHighlight = highlight
+          .split("\n")
+          .filter((line) => line !== "");
+        if (splittedHighlight.length < 3) {
+          continue;
+        }
+
+        const bookTitle = splittedHighlight[0].replace("\ufeff", "");
+        let highlightPage = null;
+        let highlightLocation = "";
+        let highlightDate = "";
+        const pageLocationDate = splittedHighlight[1];
+        const meta = pageLocationDate.split("|");
+        switch (meta.length) {
+          case 3:
+            highlightPage = meta[0].split("- Your Highlight on page ")[1] ?? meta[0].split("- Your Note on page ")[1].trim();
+            highlightLocation = meta[1].split("Location ")[1];
+            highlightDate = new Date(meta[2].split("Added on ")[1]);
+            break;
+          case 2:
+            highlightPage = "Unknown"
+            highlightLocation = meta[0].split("- Your Highlight on Location ")[1] ?? meta[0].split("- Your Note on Location ")[1];
+            highlightDate = new Date(meta[1].split("Added on ")[1]);
+            break;
+          case 1:
+            highlightLocation = meta[0].split("- Your Highlight on Location ")[1] ?? meta[0].split("- Your Note on Location ")[1];
+            break;
+          default:
+            console.log("WTF");
+            break;
+        }
+
+        const extractedHighlight = {
+          title: bookTitle,
+          page: highlightPage,
+          location: highlightLocation,
+          date: highlightDate,
+          highlight: splittedHighlight[2],
+        };
+        extractedHighlights.push(extractedHighlight);
+
+        if (books[extractedHighlight.title]) {
+          books[extractedHighlight.title].push(extractedHighlight);
+        } else {
+          books[extractedHighlight.title] = [extractedHighlight];
+        }
+      }
+      return books;
+    }
+  </script>
+</body>
+
+</html>
