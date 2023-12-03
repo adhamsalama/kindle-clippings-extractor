@@ -75,6 +75,12 @@
     integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8=" crossorigin="anonymous"></script>
   <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.js"></script>
   <script>
+    const table = new DataTable('#highlightsTable', {
+      "columnDefs": [
+        { "type": "num", "targets": 1 },
+        { "type": "num", "targets": 2 }
+      ]
+    });
     const form = document.querySelector("form");
     form.onsubmit = function (e) {
       e.preventDefault();
@@ -88,12 +94,7 @@
       });
       const booksBody = document.getElementById("booksBody");
       booksBody.innerHTML = highlightsTableHtml;
-      const table = new DataTable('#highlightsTable', {
-        "columnDefs": [
-          { "type": "num", "targets": 1 },
-          { "type": "num", "targets": 2 }
-        ]
-      });
+
       content.value = "";
     }
 
