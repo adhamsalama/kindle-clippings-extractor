@@ -4,164 +4,228 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kindle Highlights Extractor</title>
+  <title>Kindle Clippings Extractor</title>
   <style>
+    html {
+      height: 100%;
+    }
+
     body {
       font-family: 'Arial', sans-serif;
-      margin: 20px;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      background-color: #dddbdb;
+      min-height: 100%;
     }
 
-    form {
-      margin-bottom: 20px;
+    #sidebar {
+      min-width: 20%;
+      max-width: 20%;
+      background-color: #333;
+      color: white;
+      padding-top: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100%;
     }
 
-    textarea {
+    #main {
+      width: 50%;
+      padding-top: 20px;
+      padding-bottom: 20px;
+      display: block;
+      margin: auto;
+      height: 100%;
+    }
+
+    #bookList {
+      padding: 0;
+      margin: 0;
       width: 100%;
+      text-align: center;
     }
 
-    button {
-      padding: 10px;
+    #bookList li {
+      margin-bottom: 30px;
       cursor: pointer;
+      transition: background-color 0.3s;
     }
 
-    #books {
+    #bookList li:hover {
+      background-color: #555;
+    }
+
+    .clipping-content {
+      padding: 20px;
       margin-top: 20px;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
+    .clipping-highlight {
+      background-color: beige;
     }
 
-    th,
-    td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: left;
-      cursor: pointer;
-    }
-
-    th {
-      background-color: #f2f2f2;
-    }
-
-    .highlight-section {
-      margin-bottom: 20px;
+    .clipping-note {
+      background-color: cadetblue;
     }
   </style>
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 
 <body>
-  <h1>Kindle Highlights Extractor</h1>
-  <form>
-    <textarea name="content" id="content" cols="30" rows="10"></textarea>
-    <button type="submit">Extract</button>
-  </form>
-  <table id="highlightsTable">
-    <thead>
-      <tr>
-        <th>Title</th>
-        <th>Page</th>
-        <th>Location</th>
-        <th>Date</th>
-        <th>Highlight</th>
-      </tr>
-    </thead>
-    <tbody id="booksBody"></tbody>
-  </table>
-  <script src="https://code.jquery.com/jquery-3.7.1.slim.min.js"
-    integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8=" crossorigin="anonymous"></script>
-  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.js"></script>
+
+  <div id="sidebar" x-data="">
+    <h2>Books</h2>
+    <ul id="bookList">
+      <template x-for="bookTitle in Object.keys($store.booksData.books)">
+        <li x-text="bookTitle"
+          x-on:click="$store.activeBook.reset({ title: bookTitle, clippings: $store.booksData.books[bookTitle]})">
+        </li>
+      </template>
+    </ul>
+  </div>
+  <div id="main" x-data="">
+    <h1>Kindle Clippings Extractor</h1>
+    <form style="display:flex;   flex-direction: column;">
+      <textarea name="content" id="content" cols="30" rows="10"></textarea>
+      <button type="submit">Extract</button>
+    </form>
+    <div id="activeBook">
+      <h3 style="text-align: center;">Active Book</h3>
+      <h2 style="text-align: center;" x-text="$store.activeBook.bookData.title"></h2>
+      <hr>
+      <h2 style="text-align: center;">Clippings</h2>
+      <div id="sortDiv" x-data="{sortOrder: 'asc'}">
+        Sort by
+        <button x-on:click="$store.activeBook.sortClippings({field: 'page', order: sortOrder})">Page</button>
+        <button x-on:click="$store.activeBook.sortClippings({field: 'location', order: sortOrder})">Location</button>
+        <button x-on:click="$store.activeBook.sortClippings({field: 'date', order: sortOrder})">Date</button>
+        <input type="radio" name="sort" value="asc" id="ascRadio" x-model="sortOrder">
+        <label for="ascRadio">Ascending</label>
+
+        <input type="radio" name="sort" value="desc" id="descRadio" x-model="sortOrder">
+        <label for="descRadio">Descending</label>
+      </div>
+
+      <template x-for="clipping in ($store.activeBook.bookData.clippings)">
+        <div style="margin-top: 40px; text-align: left;" class="highlight-section">
+          Page: <span x-text="clipping.page ?? 'Unknown'"></span>
+          <br>
+          Location: <span x-text="clipping.location"></span>
+          <br>
+          Date: <span x-text="clipping.date.toLocaleDateString(undefined, {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric'
+          })"></span>
+          <br>
+          Clipping type: <span x-text="clipping.isNote ? 'Note' : 'Highlight'"></span>
+          <div x-bind:class="clipping.isNote ? 'clipping-note clipping-content' : 'clipping-highlight clipping-content'"
+            x-text="clipping.content">
+          </div>
+          <hr>
+      </template>
+    </div>
+  </div>
   <script>
-    const form = document.querySelector("form");
-    form.onsubmit = function (e) {
-      e.preventDefault();
-      const content = document.getElementById("content");
-      const books = extract(content.value);
-      let highlightsTableHtml = "";
-      Object.keys(books).forEach(bookTitle => {
-        books[bookTitle].forEach(highlight => {
-          highlightsTableHtml += generateTableRow(bookTitle, highlight);
-        });
+    document.addEventListener('alpine:init', () => {
+      Alpine.store('booksData', {
+        books: {},
+        reset(books) {
+          this.books = books;
+        }
       });
-      const booksBody = document.getElementById("booksBody");
-      booksBody.innerHTML = highlightsTableHtml;
-      const table = new DataTable('#highlightsTable', {
-        "columnDefs": [
-          { "type": "num", "targets": 1 },
-          { "type": "num", "targets": 2 }
-        ]
+      Alpine.store('activeBook', {
+        bookData: { title: '', clippings: [] },
+        reset(activeBook) {
+          this.bookData = activeBook;
+        },
+        sortClippings({ field, order }) {
+          this.bookData.highlights = this.bookData.clippings.sort((a, b) => {
+            if (field === 'page') {
+              if (order === 'asc') {
+                return (a.page ?? 0) - (b.page ?? 0)
+              }
+              return (b.page ?? 0) - (a.page ?? 0)
+            }
+            if (field === 'location') {
+              if (order === 'asc') {
+                return parseInt(a.location.split('-')[0]) - parseInt(b.location.split('-')[0])
+              }
+              return parseInt(b.location.split('-')[0]) - parseInt(a.location.split('-')[0])
+            }
+            if (field === 'date') {
+              if (order === 'asc') {
+                return a.date - b.date
+              }
+              return b.date - a.date
+            }
+          })
+        }
       });
-      content.value = "";
-    }
+      const form = document.querySelector("form");
+      form.onsubmit = function (e) {
+        e.preventDefault();
+        const content = document.getElementById("content");
+        const books = extract(content.value);
+        Alpine.store('booksData').reset(books);
 
-    function generateTableRow(title, highlight) {
-      return `<tr class="highlight-section">
-        <td>${title}</td>
-        <td data-order="${highlight.page == "Unknown" ? 0 : highlight.page}">${highlight.page}</td>
-        <td data-order="${highlight.location.split("-")[0]}">${highlight.location}</td>
-        <td data-order="${highlight.date.getTime()}">${highlight.date.toDateString()}</td>
-        <td>${highlight.highlight}</td>
-      </tr>`;
-    }
+      };
+      function extract(fileContent) {
+        const books = {};
+        const clippings = fileContent.split("==========");
+        for (const clipping of clippings) {
+          const splittedClipping = clipping
+            .split("\n")
+            .filter((line) => line !== "");
+          if (splittedClipping.length < 3) {
+            continue;
+          }
 
-    function extract(fileContent) {
-      const extractedHighlights = [];
-      const books = {};
+          const bookTitle = splittedClipping[0].replace("\ufeff", "");
+          let clippingPage = null;
+          let clippingLocation = "";
+          let clippingDate = "";
+          const pageLocationDate = splittedClipping[1];
+          const meta = pageLocationDate.split("|");
+          const isNote = meta[0].includes("Note");
+          switch (meta.length) {
+            case 3:
+              clippingPage = meta[0].split("- Your Highlight on page ")[1] ?? meta[0].split("- Your Note on page ")[1].trim();
+              clippingLocation = meta[1].split("Location ")[1];
+              clippingDate = new Date(meta[2].split("Added on ")[1]);
+              break;
+            case 2:
+              clippingLocation = meta[0].split("- Your Highlight on Location ")[1] ?? meta[0].split("- Your Note on Location ")[1];
+              clippingDate = new Date(meta[1].split("Added on ")[1]);
+              break;
+            case 1:
+              clippingLocation = meta[0].split("- Your Highlight on Location ")[1] ?? meta[0].split("- Your Note on Location ")[1];
+              break;
+          }
 
-      const highlights = fileContent.split("==========");
-      for (const highlight of highlights) {
-        const splittedHighlight = highlight
-          .split("\n")
-          .filter((line) => line !== "");
-        if (splittedHighlight.length < 3) {
-          continue;
+          const extractedClipping = {
+            title: bookTitle,
+            page: clippingPage,
+            location: clippingLocation,
+            date: clippingDate,
+            isNote,
+            content: splittedClipping[2],
+          };
+
+          if (books[extractedClipping.title]) {
+            books[extractedClipping.title].push(extractedClipping);
+          } else {
+            books[extractedClipping.title] = [extractedClipping];
+          }
         }
-
-        const bookTitle = splittedHighlight[0].replace("\ufeff", "");
-        let highlightPage = null;
-        let highlightLocation = "";
-        let highlightDate = "";
-        const pageLocationDate = splittedHighlight[1];
-        const meta = pageLocationDate.split("|");
-        switch (meta.length) {
-          case 3:
-            highlightPage = meta[0].split("- Your Highlight on page ")[1] ?? meta[0].split("- Your Note on page ")[1].trim();
-            highlightLocation = meta[1].split("Location ")[1];
-            highlightDate = new Date(meta[2].split("Added on ")[1]);
-            break;
-          case 2:
-            highlightPage = "Unknown"
-            highlightLocation = meta[0].split("- Your Highlight on Location ")[1] ?? meta[0].split("- Your Note on Location ")[1];
-            highlightDate = new Date(meta[1].split("Added on ")[1]);
-            break;
-          case 1:
-            highlightLocation = meta[0].split("- Your Highlight on Location ")[1] ?? meta[0].split("- Your Note on Location ")[1];
-            break;
-          default:
-            console.log("WTF");
-            break;
-        }
-
-        const extractedHighlight = {
-          title: bookTitle,
-          page: highlightPage,
-          location: highlightLocation,
-          date: highlightDate,
-          highlight: splittedHighlight[2],
-        };
-        extractedHighlights.push(extractedHighlight);
-
-        if (books[extractedHighlight.title]) {
-          books[extractedHighlight.title].push(extractedHighlight);
-        } else {
-          books[extractedHighlight.title] = [extractedHighlight];
-        }
+        return books;
       }
-      return books;
-    }
+    });
   </script>
 </body>
 
