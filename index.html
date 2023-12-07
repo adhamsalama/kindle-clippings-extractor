@@ -15,7 +15,6 @@
       margin: 0;
       padding: 0;
       display: flex;
-      background-color: #dddbdb;
       min-height: 100%;
     }
 
@@ -37,6 +36,7 @@
       padding-bottom: 20px;
       display: block;
       margin: auto;
+      margin-top: 0;
       height: 100%;
     }
 
@@ -48,7 +48,7 @@
     }
 
     #bookList li {
-      margin-bottom: 30px;
+      padding: 20px;
       cursor: pointer;
       transition: background-color 0.3s;
     }
@@ -63,11 +63,28 @@
     }
 
     .clipping-highlight {
-      background-color: beige;
+      background: #eee;
     }
 
     .clipping-note {
-      background-color: cadetblue;
+      background: rgb(238, 238, 198);
+    }
+
+    blockquote {
+      margin: 0;
+    }
+
+    blockquote p {
+      padding: 15px;
+      border-radius: 5px;
+    }
+
+    blockquote p::before {
+      content: '\201C';
+    }
+
+    blockquote p::after {
+      content: '\201D';
     }
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -124,9 +141,9 @@
           })"></span>
           <br>
           Clipping type: <span x-text="clipping.isNote ? 'Note' : 'Highlight'"></span>
-          <div x-bind:class="clipping.isNote ? 'clipping-note clipping-content' : 'clipping-highlight clipping-content'"
-            x-text="clipping.content">
-          </div>
+          <blockquote>
+            <p x-text="clipping.content" x-bind:class="clipping.isNote ? 'clipping-note' : 'clipping-highlight'"></p>
+          </blockquote>
           <hr>
       </template>
     </div>
