@@ -113,14 +113,19 @@
       <h2 style="text-align: center;" x-text="$store.activeBook.bookData.title"></h2>
       <hr>
       <h2 style="text-align: center;">Clippings</h2>
-      <div id="sortDiv" x-data="{sortOrder: 'asc'}">
+      <div style="text-align: left;">
+        Export options
+        <button x-on:click="$store.activeBook.copyAsMarkdown()">Copy as Markdown</button>
+        <button x-on:click="$store.activeBook.copyAsPlaintext()">Copy as Plaintext</button>
+        <button x-on:click="$store.activeBook.copyAsJSON()">Copy as JSON</button>
+      </div>
+      <div id="sortDiv" style="margin-top: 20px; text-align: left;" x-data="{sortOrder: 'asc'}">
         Sort by
         <button x-on:click="$store.activeBook.sortClippings({field: 'page', order: sortOrder})">Page</button>
         <button x-on:click="$store.activeBook.sortClippings({field: 'location', order: sortOrder})">Location</button>
         <button x-on:click="$store.activeBook.sortClippings({field: 'date', order: sortOrder})">Date</button>
         <input type="radio" name="sort" value="asc" id="ascRadio" x-model="sortOrder">
         <label for="ascRadio">Ascending</label>
-
         <input type="radio" name="sort" value="desc" id="descRadio" x-model="sortOrder">
         <label for="descRadio">Descending</label>
       </div>
@@ -149,6 +154,14 @@
     </div>
   </div>
   <script>
+    const dateOptions = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric'
+    };
     document.addEventListener('alpine:init', () => {
       Alpine.store('booksData', {
         books: {},
@@ -160,6 +173,29 @@
         bookData: { title: '', clippings: [] },
         reset(activeBook) {
           this.bookData = activeBook;
+        },
+        copyAsMarkdown() {
+          let markdown = `# ${this.bookData.title}\n`;
+          for (const clipping of this.bookData.clippings) {
+            markdown += `Page: ${clipping.page ?? 'Unknown'}\n\nLocation: ${clipping.location}\n\nDate: ${clipping.date.toLocaleDateString(undefined, dateOptions)}\n\nClipping type: ${clipping.isNote ? 'Note' : 'Highlight'}\n\n> ${clipping.content}\n\n---\n\n`;
+          }
+          navigator.clipboard.writeText(
+            markdown
+          )
+        },
+        copyAsPlaintext() {
+          let plaintext = this.bookData.title;
+          for (const clipping of this.bookData.clippings) {
+            plaintext += `Page: ${clipping.page ?? 'Unknown'}\n\nLocation: ${clipping.location}\n\nDate: ${clipping.date.toLocaleDateString(undefined, dateOptions)}\n\nClipping type: ${clipping.isNote ? 'Note' : 'Highlight'}\n\n> ${clipping.content}\n\n---\n\n`;
+          }
+          navigator.clipboard.writeText(
+            plaintext
+          )
+        },
+        copyAsJSON() {
+          navigator.clipboard.writeText(
+            JSON.stringify(this.bookData)
+          )
         },
         sortClippings({ field, order }) {
           this.bookData.highlights = this.bookData.clippings.sort((a, b) => {
