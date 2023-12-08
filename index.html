@@ -147,7 +147,7 @@
           <br>
           Clipping type: <span x-text="clipping.note ? 'Note' : 'Highlight'"></span>
           <blockquote>
-            <p x-text="clipping.content" x-bind:class="clipping.note ? 'clipping-note' : 'clipping-highlight'"></p>
+            <p x-text="clipping.highlight" x-bind:class="clipping.note ? 'clipping-note' : 'clipping-highlight'"></p>
             <template x-if="clipping.note">
               <cite x-text="clipping.note"></cite>
             </template>
@@ -180,7 +180,7 @@
         copyAsMarkdown() {
           let markdown = `# ${this.bookData.title}\n`;
           for (const clipping of this.bookData.clippings) {
-            markdown += `Page: ${clipping.page ?? 'Unknown'}\n\nLocation: ${clipping.location}\n\nDate: ${clipping.date.toLocaleDateString(undefined, dateOptions)}\n\nClipping type: ${clipping.note ? 'Note' : 'Highlight'}\n\n> ${clipping.content}\n\n${clipping.note ? `Note: ${clipping.note}\n\n` : ''}---\n\n`;
+            markdown += `Page: ${clipping.page ?? 'Unknown'}\n\nLocation: ${clipping.location}\n\nDate: ${clipping.date.toLocaleDateString(undefined, dateOptions)}\n\nClipping type: ${clipping.note ? 'Note' : 'Highlight'}\n\n> ${clipping.highlight}\n\n${clipping.note ? `Note: ${clipping.note}\n\n` : ''}---\n\n`;
           }
           navigator.clipboard.writeText(
             markdown
@@ -189,7 +189,7 @@
         copyAsPlaintext() {
           let plaintext = this.bookData.title;
           for (const clipping of this.bookData.clippings) {
-            plaintext += `Page: ${clipping.page ?? 'Unknown'}\n\nLocation: ${clipping.location}\n\nDate: ${clipping.date.toLocaleDateString(undefined, dateOptions)}\n\nClipping type: ${clipping.note ? 'Note' : 'Highlight'}\n\n> ${clipping.content}\n\n ${clipping.note ? `Note: ${clipping.note}\n\n` : ''}---\n\n`;
+            plaintext += `Page: ${clipping.page ?? 'Unknown'}\n\nLocation: ${clipping.location}\n\nDate: ${clipping.date.toLocaleDateString(undefined, dateOptions)}\n\nClipping type: ${clipping.note ? 'Note' : 'Highlight'}\n\n${clipping.highlight}\n\n${clipping.note ? `Note: ${clipping.note}\n\n` : ''}---\n\n`;
           }
           navigator.clipboard.writeText(
             plaintext
@@ -234,8 +234,8 @@
       function extract(fileContent) {
         const books = {};
         const clippings = fileContent.split("==========");
-        for (let i = 0; i < clippings.length; i++) {
-          const splittedClipping = clippings[i]
+        for (const clipping of clippings) {
+          const splittedClipping = clipping
             .split("\n")
             .filter((line) => line !== "");
           if (splittedClipping.length < 3) {
@@ -268,17 +268,15 @@
             page: clippingPage,
             location: clippingLocation,
             date: clippingDate,
-            content: isNote ? null : splittedClipping[2],
+            highlight: isNote ? null : splittedClipping[2],
             note: isNote ? splittedClipping[2] : null
 
           };
           const bookClippings = books[extractedClipping.title];
           if (bookClippings) {
-            console.log({ bookClippings });
             const lastClipping = bookClippings[bookClippings.length - 1];
-            console.log({ lastClipping });
-            if (lastClipping.note && lastClipping.date.getTime() == extractedClipping.date.getTime()) {
-              lastClipping.content = extractedClipping.content;
+            if (lastClipping.date.getTime() == extractedClipping.date.getTime()) {
+              lastClipping.highlight = extractedClipping.highlight;
               continue;
             }
           }
